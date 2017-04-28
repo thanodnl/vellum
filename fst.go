@@ -105,6 +105,41 @@ func (f *FST) Get(input []byte) (uint64, bool, error) {
 	return 0, false, nil
 }
 
+func (f *FST) AtIndex(index uint64) ([]byte, error) {
+	curr := f.decoder.getRoot()
+	state, err := f.decoder.stateAt(curr)
+	if err != nil {
+		return nil, err
+	}
+
+	var word []byte
+	for ; ; {
+		if index == 0 && state.Final() {
+			break
+		}
+
+		var use byte
+		for t := 0; t < state.NumTransitions(); t++ {
+			input := state.TransitionAt(t)
+			_, _, output := state.TransitionFor(input)
+			if output > index {
+				break
+			}
+			use = input
+		}
+
+		word = append(word, use)
+		_, curr, output := state.TransitionFor(use)
+		index = index - output
+
+		state, err = f.decoder.stateAt(curr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return word, nil
+}
+
 // Version returns the encoding version used by this FST instance.
 func (f *FST) Version() int {
 	return f.ver
