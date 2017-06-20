@@ -90,6 +90,7 @@ func (f *FST) Get(input []byte) (uint64, bool, error) {
 			return 0, false, nil
 		}
 
+		fstStateV1Pool.Put(state)
 		state, err = f.decoder.stateAt(curr)
 		if err != nil {
 			return 0, false, err
@@ -100,8 +101,10 @@ func (f *FST) Get(input []byte) (uint64, bool, error) {
 
 	if state.Final() {
 		total += state.FinalOutput()
+		fstStateV1Pool.Put(state)
 		return total, true, nil
 	}
+	fstStateV1Pool.Put(state)
 	return 0, false, nil
 }
 
@@ -132,11 +135,13 @@ func (f *FST) AtIndex(index uint64) ([]byte, error) {
 		_, curr, output := state.TransitionFor(use)
 		index = index - output
 
+		fstStateV1Pool.Put(state)
 		state, err = f.decoder.stateAt(curr)
 		if err != nil {
 			return nil, err
 		}
 	}
+	fstStateV1Pool.Put(state)
 	return word, nil
 }
 

@@ -19,6 +19,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
+	"sync"
 )
 
 func init() {
@@ -60,12 +61,12 @@ func (d *decoderV1) getLen() int {
 }
 
 func (d *decoderV1) stateAt(addr int) (fstState, error) {
-	var state fstStateV1
+	state := fstStateV1Pool.Get().(*fstStateV1)
 	err := state.at(d.data, addr)
 	if err != nil {
 		return nil, err
 	}
-	return &state, nil
+	return state, nil
 }
 
 type fstStateV1 struct {
@@ -94,6 +95,13 @@ type fstStateV1 struct {
 	outBottom   int
 	outFinal    int
 }
+
+var fstStateV1Pool = sync.Pool{
+	New: func() interface{} {
+		return new(fstStateV1)
+	},
+}
+
 
 func (f *fstStateV1) isEncodedSingle() bool {
 	if f.data[f.top]>>7 > 0 {
